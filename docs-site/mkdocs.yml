@@ -1,0 +1,38 @@
+site_name: PDF Analyzer API
+site_description: FastAPI-based PDF threat scanner with JavaScript, encryption, embedded files & VirusTotal support
+site_author: Manish Soni
+repo_url: https://github.com/sonimanish0604/pdf-analyzer-api
+edit_uri: ""
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.top
+    - search.suggest
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Quick Start: quick-start.md
+  - API Usage: api-endpoint.md
+  - Threat Categories: threat-types.md
+  - Error Handling: troubleshooting.md
+  - Future Roadmap: roadmap.md
+  - License: license.md
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - codehilite
+  - tables
+  - footnotes
+  - def_list
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed
+
+plugins:
+  - search

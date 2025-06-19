@@ -58,7 +58,7 @@
       formData.append('file', fileInput.files[0]);
 
       try {
-        const response = await fetch('https://pdf-analyzer-api-8fn3.onrender.com/analyze', {
+        const response = await fetch('https://pdf-analyzer-api-8fn3.onrender.com/analyze-pdf', {
           method: 'POST',
           body: formData
         });
