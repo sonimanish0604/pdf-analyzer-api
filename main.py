@@ -49,10 +49,6 @@ def read_root():
 
 # Your existing API logic continues below
 # Example:
-@app.post("/analyze-pdf")
-async def analyze_pdf(file: UploadFile = File(...)):
-    # ... Your threat detection logic here ...
-    return {"result": "ok"}
 
 
 def is_true_pdf(file_stream):
