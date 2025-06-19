@@ -41,6 +41,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ✅ Add this to redirect root "/" to Swagger UI
+@app.get("/")
+def read_root():
+    return RedirectResponse(url="/docs")
+
+# Your existing API logic continues below
+# Example:
+@app.post("/analyze-pdf")
+async def analyze_pdf(file: UploadFile = File(...)):
+    # ... Your threat detection logic here ...
+    return {"result": "ok"}
+
+
 def is_true_pdf(file_stream):
     file_stream.seek(0)
     header = file_stream.read(5)
