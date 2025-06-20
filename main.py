@@ -2,13 +2,37 @@ import os
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
 from io import BytesIO
 #from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+
+app = FastAPI()
+
+# Set up the Limiter
+limiter = Limiter(key_func=get_remote_address)
+
+# Register exception handler for rate limit exceeded
+app.state.limiter = limiter
+#app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler) removed to add JSON
+#add logic below
+@app.exception_handler(RateLimitExceeded)
+async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "Too Many Requests",
+            "code": 429,
+            "detail": str(exc)  # Optional: shows the limit like "5 per 1 minute"
+        }
+    )
 
 # Load environment variables from .env file (optional for local dev)
 #load_dotenv()
 
-app = FastAPI()
 
 # Allow all CORS (adjust as needed)
 app.add_middleware(
@@ -28,6 +52,7 @@ def verify_api_key(request: Request):
 
 # 👇 Protect this route with API key check
 @app.post("/analyze-pdf")
+@limiter.limit("5/minute")  # Adjust this limit as needed
 async def analyze_pdf(
     file: UploadFile = File(...),
     request: Request = None,
