@@ -1,6 +1,4 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
 
 from sqlalchemy import create_engine, Column, String, Table, MetaData
 from sqlalchemy.orm import sessionmaker
