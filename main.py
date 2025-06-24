@@ -35,7 +35,7 @@ app = FastAPI()
 from fastapi import HTTPException
 
 @app.get("/test-api-keys")
-async def test_api_keys():
+async def test_api_keys(request: Request):
     if request.headers.get("x-api-key") != "admin-key":
         raise HTTPException(status_code=403, detail="Forbidden")
     return {"loaded_keys": list(API_KEY_TIERS.keys())}
