@@ -32,6 +32,10 @@ logging.basicConfig(filename="pdf_analyzer.log", level=logging.INFO)
 # ------------------ FastAPI App Setup ------------------
 app = FastAPI()
 
+@app.get("/test-api-keys")
+async def test_api_keys():
+    return {"loaded_keys": list(API_KEY_TIERS.keys())}
+
 
 # ------------------ Rate Limiter Setup ------------------
 def get_api_key_from_request(request: Request):
