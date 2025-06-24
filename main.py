@@ -12,8 +12,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import json
 
 from db import SessionLocal, api_keys_table
-from dotenv import load_dotenv
-load_dotenv()
+
 def load_api_keys_from_db():
     session = SessionLocal()
     keys = {}
