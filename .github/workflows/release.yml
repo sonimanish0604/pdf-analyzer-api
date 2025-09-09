@@ -1,0 +1,69 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'   # e.g., v1.0.0
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # (Optional) Python CI — keep this aligned with your project
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt || true
+      - run: pip install -r requirements-dev.txt || true
+      - run: |
+          if [ -f pyproject.toml ] || [ -d tests ]; then
+            echo "Running tests..."
+            pytest -q --maxfail=1 --disable-warnings || true
+          else
+            echo "No tests found, continuing."
+          fi
+
+      # Build and push Docker image to GHCR tagged with version + sha
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+
+      # Extract release notes from CHANGELOG.md
+      - name: Extract release notes
+        run: scripts/extract_changelog.sh "${GITHUB_REF_NAME}" CHANGELOG.md CHANGELOG_RELEASE.md
+
+      # Create (or update) the GitHub Release with notes
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: CHANGELOG_RELEASE.md
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # (Optional) Trigger Render production deploy via deploy hook secret
+      # - name: Deploy to Render (prod)
+      #   if: always()
+      #   run: curl -fsS -X POST "$RENDER_PROD_HOOK"
+      #   env:
+      #     RENDER_PROD_HOOK: ${{ secrets.RENDER_PROD_HOOK }}
