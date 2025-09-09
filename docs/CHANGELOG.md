@@ -1,10 +1,10 @@
-#📜 Changelog — PDF Analyzer API
+**#📜 Changelog — PDF Analyzer API**
 
 All notable changes to this project will be documented here.
 Format follows Semantic Versioning
  (MAJOR.MINOR.PATCH).
 
-###[Unreleased]
+**###[Unreleased]**
 
 Add async job processing for large PDF scans
 
@@ -12,7 +12,7 @@ Add Splunk/ELK log export for enterprise plans
 
 Improve error codes with more granular messages
 
-##[1.0.0] — 2025-09-09
+**##[1.0.0] — 2025-09-09**
 Added
 
 Initial public release of PDF Analyzer API v1 🎉
@@ -41,7 +41,7 @@ In-memory processing (no disk writes) for privacy
 
 Usage metering for future billing integration
 
-##Legend
+**##Legend**
 
 Added → New features
 
