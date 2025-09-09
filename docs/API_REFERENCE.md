@@ -1,4 +1,4 @@
-#📘 API Reference — PDF Analyzer API
+**#📘 API Reference — PDF Analyzer API**
 ##1. Overview
 
 The PDF Analyzer API scans uploaded PDF files for common risks such as encryption, embedded JavaScript, hidden files, spoofed file types, and malicious URLs.
@@ -20,8 +20,8 @@ Content Types
 
 All file uploads use multipart/form-data.
 
-##2. Endpoints
-###2.1 POST /v1/analyze
+**##2. Endpoints**
+_**###2.1 POST /v1/analyze**_
 
 Analyze an uploaded PDF file.
 
@@ -70,7 +70,7 @@ HTTP Code	Error Code	Description
 415	unsupported_media	Non-PDF file uploaded
 429	rate_limit_exceeded	Plan quota or rate limit exceeded
 500	server_error	Unexpected server issue
-###2.2 GET /v1/health
+_**###2.2 GET /v1/health**___
 
 Health check endpoint.
 
@@ -78,7 +78,7 @@ Sample Response
 
 { "ok": true }
 
-###2.3 GET /metrics
+_**###2.3 GET /metrics**__
 
 Prometheus metrics for observability.
 
@@ -92,11 +92,11 @@ request_latency_ms{route}
 
 findings_total{type}
 
-###2.4 GET /docs
+**_###2.4 GET /docs_**
 
 Interactive Swagger UI for testing and exploration.
 
-##3. Error Model
+**##3. Error Model**
 
 Errors are returned in a consistent JSON format:
 
@@ -107,7 +107,7 @@ Errors are returned in a consistent JSON format:
   }
 }
 
-##4. Rate Limits & Quotas
+**##4. Rate Limits & Quotas**
 
 Free Plan (example): 100 scans/month, max file size 5 MB.
 
@@ -138,13 +138,13 @@ Responses may include a Deprecation header with a sunset date
 
 Link header points to successor endpoint
 
-##6. Sample Workflows
-###6.1 Quick CLI Scan
+**##6. Sample Workflows**
+_**###6.1 Quick CLI Scan**_
 curl -X POST https://<prod-app>.onrender.com/v1/analyze \
   -H "x-api-key: YOUR_API_KEY" \
   -F "file=@invoice.pdf;type=application/pdf"
 
-###6.2 Python Example
+_**###6.2 Python Example**_
 import requests
 
 url = "https://<prod-app>.onrender.com/v1/analyze"
@@ -154,7 +154,7 @@ files = {"file": open("sample.pdf", "rb")}
 response = requests.post(url, headers=headers, files=files)
 print(response.json())
 
-###6.3 Node.js Example
+_**###6.3 Node.js Example**_
 import axios from "axios";
 import fs from "fs";
 
