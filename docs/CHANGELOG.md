@@ -50,3 +50,8 @@ Changed → Updates/improvements (backward-compatible)
 Fixed → Bug fixes
 
 Removed → Features removed/deprecated
+
+## [1.1.0] — 2025-09-15
+### Added
+- DOCX/PNG analyzers (beta)
+
