@@ -7,6 +7,9 @@ A FastAPI-based microservice that scans uploaded PDF files for common risks:
 - 🕵️ Spoofed file types (e.g. ZIP masquerading as PDF)
 - 🌐 URLs with DNS resolution & VirusTotal threat intelligence
 
+## Docs
+PRODUCT.md, API_REFERENCE.md, ACCEPTANCE_CRITERIA.md, SECURITY.md, BUSINESS.md.
+
 ## 🚀 Features
 - Pure in-memory scanning (no temp file writes)
 - Safe for PII/regulated data
@@ -18,7 +21,7 @@ A FastAPI-based microservice that scans uploaded PDF files for common risks:
 ## 🧪 Sample Use Case
 ```bash
 curl -X 'POST' \
-  'http://127.0.0.1:8000/analyze-pdf' \
+  'http://127.0.0.1:8000/v1/analyze' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@sample.pdf;type=application/pdf'
