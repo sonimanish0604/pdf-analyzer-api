@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
+from fastapi.responses import RedirectResponse, Response
 # from app.api.v1.routes import router as v1_router  # your router
 
 def create_app() -> FastAPI:
@@ -33,3 +34,13 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
+
+@app.get("/", include_in_schema=False)
+def root():
+    # send people to the docs
+    return RedirectResponse(url="/docs")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    # no favicon; return 204 to avoid 404 spam in logs
+    return Response(status_code=204)
