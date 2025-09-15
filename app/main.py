@@ -375,7 +375,7 @@ async def analyze_pdf(
         file_bytes = await file.read()
         file_stream = BytesIO(file_bytes)
 
-        from pdf_utils import (
+        from app.pdf_utils import (
             is_true_pdf,
             is_encrypted,
             has_embedded_javascript,
