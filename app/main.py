@@ -386,7 +386,8 @@ async def analyze_pdf(
         summary = {
             "valid_pdf": is_true_pdf(BytesIO(file_bytes)),
             "encrypted": is_encrypted(BytesIO(file_bytes)),
-            "embedded_javascript": False,
+            #"embedded_javascript": False,
+            "embedded_javascript": has_embedded_javascript(file_bytes),  # added on 09/15
             "urls_found": {"safe": [], "suspicious": []}
         }
 
