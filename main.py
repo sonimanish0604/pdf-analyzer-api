@@ -16,7 +16,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import json
-
+#--added the following import- 09.14
+import hmac, hashlib, secrets, uuid
 #from db import SessionLocal, api_keys_table
 #--added 09/14 just another table
 from db import SessionLocal, api_keys_table, audit_admin_events
@@ -219,6 +220,7 @@ app.add_middleware(
 
 # ------------------ API Key Verification ------------------
 API_KEY = os.getenv("API_AUTH_KEY")  # Optional for fixed key auth
+API_KEY = os.getenv("ADMIN_KEY")  # Optional for fixed key auth -- changed 09/14
 #--replacing VERIFY_API_KEY --09/14
 #def verify_api_key(request: Request):
 #    client_key = request.headers.get("x-api-key")
