@@ -374,7 +374,13 @@ async def analyze_pdf(
     try:
         file_bytes = await file.read()
         file_stream = BytesIO(file_bytes)
-
+        
+        file_stream.seek(0); valid_pdf = is_true_pdf(file_stream)
+        file_stream.seek(0); encrypted = is_encrypted(file_stream)
+        embedded_js = has_embedded_javascript(file_bytes)  # pass BYTES
+        file_stream.seek(0); urls = extract_urls(file_stream) or {"safe": [], "suspicious": []}
+        file_stream.seek(0); has_files, names = has_embedded_files_and_names(file_stream) or (False, [])
+        
         from app.pdf_utils import (
             is_true_pdf,
             is_encrypted,
@@ -382,13 +388,22 @@ async def analyze_pdf(
             extract_urls,
             has_embedded_files_and_names,
         )
-
-        summary = {
-            "valid_pdf": is_true_pdf(BytesIO(file_bytes)),
-            "encrypted": is_encrypted(BytesIO(file_bytes)),
+        #--commented below
+        #summary = {
+        #    "valid_pdf": is_true_pdf(BytesIO(file_bytes)),
+        #    "encrypted": is_encrypted(BytesIO(file_bytes)),
             #"embedded_javascript": False,
-            "embedded_javascript": has_embedded_javascript(file_bytes),  # added on 09/15
-            "urls_found": {"safe": [], "suspicious": []}
+        #    "embedded_javascript": has_embedded_javascript(file_bytes),  # added on 09/15
+        #    "urls_found": {"safe": [], "suspicious": []}
+        #}
+        #--added below 09/15 to handle embedded files
+        summary = {
+            "valid_pdf": bool(valid_pdf),
+            "encrypted": bool(encrypted),
+            "embedded_javascript": bool(embedded_js),
+            "urls_found": {"safe": urls.get("safe", []), "suspicious": urls.get("suspicious", [])},
+            "embedded_files": bool(has_files),
+            "embedded_file_names": names or [],
         }
 
         if not summary["encrypted"]:

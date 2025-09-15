@@ -103,17 +103,39 @@ def extract_urls(file_stream: BytesIO) -> Dict[str, List[str]]:
     except:
         return {"safe": [], "suspicious": []}
 
+#--removing below to add below 09/15
+#def has_embedded_files_and_names(file_stream: BytesIO) -> Tuple[bool, List[str]]:
+#    file_stream.seek(0)
+#    try:
+#        with pikepdf.open(file_stream) as pdf:
+#            names = []
+#            if "/Names" in pdf.root:
+#                embedded_files = pdf.root["/Names"].get("/EmbeddedFiles", None)
+#                if embedded_files:
+#                    for i in range(0, len(embedded_files["/Names"]), 2):
+#                        names.append(str(embedded_files["/Names"][i]))
+#            return (len(names) > 0, names)
+#    except:
+#        return (False, [])
+    #----added to check embedded files 09/15
+    import re, fitz
 
-def has_embedded_files_and_names(file_stream: BytesIO) -> Tuple[bool, List[str]]:
-    file_stream.seek(0)
+def has_embedded_files_and_names(src):
+    data = src if isinstance(src, (bytes, bytearray)) else src.read()
     try:
-        with pikepdf.open(file_stream) as pdf:
+        with fitz.open(stream=data, filetype="pdf") as doc:
             names = []
-            if "/Names" in pdf.root:
-                embedded_files = pdf.root["/Names"].get("/EmbeddedFiles", None)
-                if embedded_files:
-                    for i in range(0, len(embedded_files["/Names"]), 2):
-                        names.append(str(embedded_files["/Names"][i]))
-            return (len(names) > 0, names)
-    except:
-        return (False, [])
+            for i in range(doc.embfile_count()):
+                info = doc.embfile_info(i) or {}
+                names.append(info.get("filename") or info.get("name") or f"embedded_{i}")
+        if names:
+            return True, names
+    except Exception:
+        pass
+
+    # Fallback: filename hints in Filespec dictionaries
+    names = re.findall(rb"/F\s*\(([^)]+)\)", data)
+    names += re.findall(rb"/UF\s*\(([^)]+)\)", data)
+    names = [n.decode("latin-1", "ignore") for n in names]
+    return (len(names) > 0), names
+#---
