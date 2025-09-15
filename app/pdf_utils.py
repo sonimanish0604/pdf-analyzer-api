@@ -1,63 +1,53 @@
+from io import BytesIO
+from typing import Tuple, List, Dict, Union
+
+import filetype
 from PyPDF2 import PdfReader
 import fitz  # PyMuPDF
-import pikepdf
-import re
-import filetype
-from typing import Tuple, List, Dict
-from io import BytesIO
+import re, zlib
 
-
-def is_true_pdf(file_stream: BytesIO) -> bool:
-    file_stream.seek(0)
-    kind = filetype.guess(file_stream.read(262))
-    file_stream.seek(0)
-    return kind is not None and kind.mime == 'application/pdf'
-
-
-def is_encrypted(file_stream: BytesIO) -> bool:
-    file_stream.seek(0)
-    try:
-        reader = PdfReader(file_stream)
-        return reader.is_encrypted
-    except:
-        return True
-
-#--09/15 -- commenting this 
-#def has_embedded_javascript(file_bytes: bytes) -> bool:
-#    try:
-#        with fitz.open(stream=file_bytes, filetype="pdf") as doc:
-#            js = doc.get_javascript()
-#            return js.strip() != ""
-#    except Exception:
-#        return False
-#--adding below
-# in app/pdf_utils.py
-import io, re, zlib
-import fitz  # PyMuPDF
-
-_JS_PATTERNS = [
-    rb"/S\s*/JavaScript",  # action type
-    rb"/JavaScript\b",     # names tree or general marker
-    rb"/JS\b",             # /JS entry
-    rb"/OpenAction\b",     # doc-level auto action
-    rb"/AA\b",             # additional actions
-]
-
-def _ensure_bytes(src):
+# -------- helpers --------
+def _ensure_bytes(src: Union[bytes, bytearray, BytesIO]) -> bytes:
     if isinstance(src, (bytes, bytearray)):
         return bytes(src)
     if hasattr(src, "read"):
         pos = src.tell() if hasattr(src, "tell") else 0
         data = src.read()
-        try: src.seek(pos)
-        except Exception: pass
+        try:
+            src.seek(pos)
+        except Exception:
+            pass
         return data
     raise TypeError("expected bytes or file-like")
 
-def has_embedded_javascript(src) -> bool:
+# -------- detectors --------
+def is_true_pdf(file_stream: BytesIO) -> bool:
+    file_stream.seek(0)
+    kind = filetype.guess(file_stream.read(262))
+    file_stream.seek(0)
+    return kind is not None and kind.mime == "application/pdf"
+
+def is_encrypted(file_stream: BytesIO) -> bool:
+    file_stream.seek(0)
+    try:
+        reader = PdfReader(file_stream)
+        return bool(reader.is_encrypted)
+    except Exception:
+        # If we can't read it as a PDF, treat as encrypted/unsafe
+        return True
+
+_JS_PATTERNS = [
+    rb"/S\s*/JavaScript",
+    rb"/JavaScript\b",
+    rb"/JS\b",
+    rb"/OpenAction\b",
+    rb"/AA\b",
+]
+
+def has_embedded_javascript(src: Union[bytes, bytearray, BytesIO]) -> bool:
     data = _ensure_bytes(src)
 
-    # 1) Quick path via PyMuPDF
+    # 1) PyMuPDF quick path
     try:
         with fitz.open(stream=data, filetype="pdf") as doc:
             js = (doc.get_javascript() or "").strip()
@@ -66,28 +56,26 @@ def has_embedded_javascript(src) -> bool:
     except Exception:
         pass
 
-    # 2) Token search in raw bytes
+    # 2) Token search
     if any(re.search(p, data) for p in _JS_PATTERNS):
         if re.search(rb"/S\s*/JavaScript", data) and re.search(rb"/JS\b", data):
             return True
 
-    # 3) Decompress Flate streams and look for JS markers
-    for m in re.finditer(rb"<<[^>]*?/Filter\s*/FlateDecode[^>]*?>>\s*stream(.*?)endstream",
-                         data, flags=re.S):
+    # 3) Decompress Flate streams and search inside
+    for m in re.finditer(rb"<<[^>]*?/Filter\s*/FlateDecode[^>]*?>>\s*stream(.*?)endstream", data, flags=re.S):
         comp = m.group(1)
         nl = comp.find(b"\n")
-        if 0 <= nl <= 2:  # trim \n or \r\n after 'stream'
+        if 0 <= nl <= 2:
             comp = comp[nl+1:]
         try:
-            decomp = zlib.decompress(comp, -15)  # raw deflate
+            decomp = zlib.decompress(comp, -15)
         except Exception:
             continue
-        if (b"/S/JavaScript" in decomp or b"/JavaScript" in decomp or b"/JS" in decomp
-                or b"app.alert" in decomp):
+        if (b"/S/JavaScript" in decomp or b"/JavaScript" in decomp or b"/JS" in decomp or b"app.alert" in decomp):
             return True
 
     return False
-#---done adding 09/15
+
 def extract_urls(file_stream: BytesIO) -> Dict[str, List[str]]:
     file_stream.seek(0)
     try:
@@ -95,36 +83,19 @@ def extract_urls(file_stream: BytesIO) -> Dict[str, List[str]]:
         urls = []
         for page in reader.pages:
             text = page.extract_text() or ""
-            urls += re.findall(r'https?://[^\s)>"]+', text)
-        # Naive safe/suspicious split
+            urls += re.findall(r"https?://[^\s)>\"]+", text)
         safe = [u for u in urls if any(k in u for k in ("wikipedia.org", "github.com", "mit.edu"))]
         suspicious = list(set(urls) - set(safe))
         return {"safe": safe, "suspicious": suspicious}
-    except:
+    except Exception:
         return {"safe": [], "suspicious": []}
 
-#--removing below to add below 09/15
-#def has_embedded_files_and_names(file_stream: BytesIO) -> Tuple[bool, List[str]]:
-#    file_stream.seek(0)
-#    try:
-#        with pikepdf.open(file_stream) as pdf:
-#            names = []
-#            if "/Names" in pdf.root:
-#                embedded_files = pdf.root["/Names"].get("/EmbeddedFiles", None)
-#                if embedded_files:
-#                    for i in range(0, len(embedded_files["/Names"]), 2):
-#                        names.append(str(embedded_files["/Names"][i]))
-#            return (len(names) > 0, names)
-#    except:
-#        return (False, [])
-    #----added to check embedded files 09/15
-    import re, fitz
-
-def has_embedded_files_and_names(src):
-    data = src if isinstance(src, (bytes, bytearray)) else src.read()
+def has_embedded_files_and_names(src: Union[bytes, bytearray, BytesIO]) -> Tuple[bool, List[str]]:
+    data = _ensure_bytes(src)
+    # 1) PyMuPDF: enumerate embedded files
     try:
+        names: List[str] = []
         with fitz.open(stream=data, filetype="pdf") as doc:
-            names = []
             for i in range(doc.embfile_count()):
                 info = doc.embfile_info(i) or {}
                 names.append(info.get("filename") or info.get("name") or f"embedded_{i}")
@@ -132,10 +103,8 @@ def has_embedded_files_and_names(src):
             return True, names
     except Exception:
         pass
-
-    # Fallback: filename hints in Filespec dictionaries
+    # 2) Fallback: infer names from Filespec dictionaries
     names = re.findall(rb"/F\s*\(([^)]+)\)", data)
     names += re.findall(rb"/UF\s*\(([^)]+)\)", data)
-    names = [n.decode("latin-1", "ignore") for n in names]
-    return (len(names) > 0), names
-#---
+    out = [n.decode("latin-1", "ignore") for n in names]
+    return (len(out) > 0), out
