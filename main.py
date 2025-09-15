@@ -89,6 +89,13 @@ def admin_echo(request: Request):
     if request.headers.get("x-admin-token") != os.getenv("ADMIN_KEY"):
         raise HTTPException(status_code=403, detail="Forbidden")
     return {"ok": True, "plans": PLAN_LIMITS}
+#--added v1 path as well
+@app.get("/v1/admin/echo")
+def admin_echo_v1(request: Request):
+    if request.headers.get("x-admin-token") != os.getenv("ADMIN_KEY"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return {"ok": True, "plans": PLAN_LIMITS}
+
 #--replaced 09/14
 
 #--added 09/14 minimal create/list/revoke to avud manual SQL
@@ -372,7 +379,8 @@ async def analyze_pdf(
         logging.warning(f"Rate limit tracking failed: {e}")
 
     headers = {
-        "X-RateLimit-Limit": API_KEY_TIERS.get(request.headers.get("x-api-key"), "5/minute"),
+        #"X-RateLimit-Limit": API_KEY_TIERS.get(request.headers.get("x-api-key"), "5/minute"),
+        "X-RateLimit-Limit": dynamic_limit_provider(request),#--added 09/14 after commenting above line
         "X-RateLimit-Remaining": remaining
     }
 
