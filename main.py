@@ -76,7 +76,7 @@ logging.basicConfig(filename="pdf_analyzer.log", level=logging.INFO)
 # ------------------ FastAPI App Setup ------------------
 app = FastAPI()
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 #--replacing /test-api-keys 09/14
 #@app.get("/test-api-keys")
