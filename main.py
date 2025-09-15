@@ -77,6 +77,17 @@ logging.basicConfig(filename="pdf_analyzer.log", level=logging.INFO)
 app = FastAPI()
 
 from fastapi import HTTPException, Request
+#--adding below to debug who is running 09/15
+@app.get("/__who")
+def __who():
+    import pathlib, hashlib
+    p = pathlib.Path(__file__)
+    return {"file": str(p), "sha": hashlib.sha1(p.read_bytes()).hexdigest()[:8]}
+
+@app.get("/__routes")
+def __routes():
+    return sorted([getattr(r, "path", None) for r in app.routes if getattr(r, "path", None)])
+#---end of debug to test services
 
 #--replacing /test-api-keys 09/14
 #@app.get("/test-api-keys")
