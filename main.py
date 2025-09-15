@@ -85,7 +85,7 @@ from fastapi import HTTPException
 #    return {"loaded_keys": list(API_KEY_TIERS.keys())}
 @app.get("/admin/echo")
 def admin_echo(request: Request):
-    if request.headers.get("x-admin-token") != ADMIN_KEY:
+    if request.headers.get("x-admin-token") != os.getenv("ADMIN_KEY"):
         raise HTTPException(status_code=403, detail="Forbidden")
     return {"ok": True, "plans": PLAN_LIMITS}
 #--replaced 09/14
