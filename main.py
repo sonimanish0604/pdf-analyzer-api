@@ -226,7 +226,7 @@ app.add_middleware(
 )
 
 # ------------------ API Key Verification ------------------
-API_KEY = os.getenv("API_AUTH_KEY")  # Optional for fixed key auth
+#API_KEY = os.getenv("API_AUTH_KEY")  # Optional for fixed key auth
 API_KEY = os.getenv("ADMIN_KEY")  # Optional for fixed key auth -- changed 09/14
 #--replacing VERIFY_API_KEY --09/14
 #def verify_api_key(request: Request):
