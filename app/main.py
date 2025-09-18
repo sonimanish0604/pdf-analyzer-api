@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from io import BytesIO
 #--added 09/18 for redis Api Rate Limit
 from redis import asyncio as aioredis
-from slowapi.redis import RedisBackend
 #--end
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
