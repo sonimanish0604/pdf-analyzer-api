@@ -255,7 +255,7 @@ if not redis_url:
     raise RuntimeError("REDIS_URL is required for rate limiting")
 
 redis = aioredis.from_url(redis_url, encoding="utf-8", decode_responses=True)
-storage = RedisBackend(redis)
+storage = RedisStorage(redis_url)
 
 # ------------------ API Key Verification ------------------
 def verify_api_key(request: Request):
