@@ -14,10 +14,20 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select, insert, update, and_, text
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
+#--added below to use Redisstorage for rate limiting 09/18
+from limits import RateLimitItemPerMinute
+from limits.storage import RedisStorage
+from limits.strategies import FixedWindowRateLimiter
+import os
+
+# Setup Redis storage (from REDIS_URL env var)
+redis_url = os.getenv("REDIS_URL")
+if not redis_url:
+    raise RuntimeError("REDIS_URL must be set")
+
+storage = RedisStorage(redis_url)
+limiter = FixedWindowRateLimiter(storage)
+#---end --RedisStorage
 
 from app.core.config import get_settings
 from app.db import SessionLocal, api_keys_table, audit_admin_events
@@ -228,11 +238,18 @@ def get_api_key_from_request(request: Request):
     raw = request.headers.get("x-api-key")
     p, _ = _parse_key(raw) if raw else (None, None)
     return p or get_remote_address(request)
-
-def dynamic_limit_provider(request: Request = None):
-    plan = getattr(request.state, "plan", "free") if request else "free"
-    return PLAN_LIMITS.get(plan, "10/minute")
-
+#--commenting below to replace with RedisStorage 09/18
+#def dynamic_limit_provider(request: Request = None):
+#    plan = getattr(request.state, "plan", "free") if request else "free"
+#    return PLAN_LIMITS.get(plan, "10/minute")
+def get_rate_limit_for_plan(plan: str) -> RateLimitItemPerMinute:
+    plan_limits = {
+        "free": RateLimitItemPerMinute(10),
+        "pro": RateLimitItemPerMinute(60),
+        "enterprise": RateLimitItemPerMinute(120),
+    }
+    return plan_limits.get(plan, RateLimitItemPerMinute(10))  # default to free
+#-end
 #--commented, added below for rate limiting in Redis 09/18--limiter = Limiter(key_func=get_api_key_from_request, default_limits=[], enabled=True)
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:
@@ -240,10 +257,6 @@ if not redis_url:
 
 redis = aioredis.from_url(redis_url, encoding="utf-8", decode_responses=True)
 storage = RedisBackend(redis)
-limiter = Limiter(key_func=get_api_key_from_request, default_limits=[], storage=storage)
-#--
-app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
 
 # ------------------ API Key Verification ------------------
 def verify_api_key(request: Request):
@@ -296,26 +309,42 @@ def verify_api_key(request: Request):
         s.close()
 
 # ------------------ 429 Handler ------------------
-@app.exception_handler(RateLimitExceeded)
-async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    reset_time = datetime.utcnow() + timedelta(seconds=60)
-    headers = {
-        "Retry-After": "60",
-        "X-RateLimit-Limit": dynamic_limit_provider(request),
-        "X-RateLimit-Remaining": "0",
-        "X-RateLimit-Reset": str(int(reset_time.timestamp()))
-    }
-    logging.warning(f"Rate limit exceeded for {request.client.host} - KeyPrefix: {getattr(request.state, 'key_prefix','')}")
-    return JSONResponse(status_code=429, content={"error": "Too Many Requests"}, headers=headers)
+#handled manually, code related to slowapi removed
 
 # ------------------ Main Endpoint ------------------
 @app.post("/analyze-pdf")
-@limiter.limit(lambda *args, **kwargs: dynamic_limit_provider(kwargs.get("request")))
 async def analyze_pdf(
     file: UploadFile = File(...),
     request: Request = None,
     _: None = Depends(verify_api_key),
 ):
+    #--added 09/18 to implement rate limiting using RedisStorage
+        # Extract key prefix and plan from request state
+    key = getattr(request.state, "key_prefix", None)
+    plan = getattr(request.state, "plan", "free")
+
+    # Get the rate limit for this plan
+    limit = get_rate_limit_for_plan(plan)
+
+    # Apply the rate limit using Redis
+    if not limiter.test(limit, key):
+        retry_after = limit.get_expiry()
+        headers = {
+            "Retry-After": str(retry_after),
+            "X-RateLimit-Limit": str(limit.amount),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": str(int((datetime.utcnow() + timedelta(seconds=retry_after)).timestamp())),
+        }
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Too Many Requests — rate limit exceeded"},
+            headers=headers,
+        )
+
+    # Consume the request (increment the counter)
+    limiter.hit(limit, key)
+
+    # (continue your existing PDF analysis logic here...)
     try:
         file_bytes  = await file.read()
         file_stream = BytesIO(file_bytes)
