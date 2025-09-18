@@ -4,7 +4,10 @@ import hmac, hashlib, secrets, uuid
 import logging
 from datetime import datetime, timedelta
 from io import BytesIO
-
+#--added 09/18 for redis Api Rate Limit
+from redis import asyncio as aioredis
+from slowapi.redis import RedisBackend
+#--end
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -230,7 +233,15 @@ def dynamic_limit_provider(request: Request = None):
     plan = getattr(request.state, "plan", "free") if request else "free"
     return PLAN_LIMITS.get(plan, "10/minute")
 
-limiter = Limiter(key_func=get_api_key_from_request, default_limits=[], enabled=True)
+#--commented, added below for rate limiting in Redis 09/18--limiter = Limiter(key_func=get_api_key_from_request, default_limits=[], enabled=True)
+redis_url = os.getenv("REDIS_URL")
+if not redis_url:
+    raise RuntimeError("REDIS_URL is required for rate limiting")
+
+redis = aioredis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+storage = RedisBackend(redis)
+limiter = Limiter(key_func=get_api_key_from_request, default_limits=[], storage=storage)
+#--
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
