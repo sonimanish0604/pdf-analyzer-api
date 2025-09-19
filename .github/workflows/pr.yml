@@ -1,0 +1,64 @@
+# .github/workflows/pr.yml
+# ------------------------------------------------------
+# PURPOSE: run automatic checks on every Pull Request
+# and push to main branch. Think of this as your
+# "pre-flight checklist".
+# ------------------------------------------------------
+
+name: PR CI  # appears in GitHub Actions UI
+
+on:
+  pull_request:    # trigger when someone opens/updates a PR
+  push:
+    branches: [main]  # also run on direct pushes to main
+
+jobs:
+  ci:              # single job called "ci"
+    runs-on: ubuntu-latest  # GitHub provides a Linux VM for you
+    timeout-minutes: 20     # kill the job if it hangs too long
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # pulls your code into the VM so it can run checks
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+        # sets Python version (like choosing which toolbox to use)
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt', 'pyproject.toml', 'poetry.lock') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+        # caches installed packages → makes repeat runs faster
+
+      - name: Install deps
+        run: |
+          # install dependencies depending on what file exists
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f pyproject.toml ]; then pip install -U pip && pip install .; fi
+          pip install pytest pytest-cov ruff mypy
+        # pytest = tests, ruff = linting, mypy = type checking
+
+      - name: Lint (ruff)
+        run: ruff check .
+        # catches style errors, unused imports, etc.
+
+      - name: Type check (mypy)
+        run: mypy src app || true
+        # ensures functions/classes use the right types
+        # "|| true" means don’t fail build yet (can tighten later)
+
+      - name: Unit tests
+        run: pytest -q --maxfail=1 --disable-warnings
+        # runs your tests folder; stops early if too many fail
+
+      - name: Build docker image (smoke build only)
+        run: docker build -t pdf-analyzer:ci .
+        # ensures Dockerfile can still produce a working image
+        # doesn’t push or deploy — just a safety build

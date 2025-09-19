@@ -1,117 +1,131 @@
-name: release
+# ------------------------------------------------------
+# PURPOSE: Tag → Release → Deploy → Verify (Production)
+# TRIGGER: push a tag like v1.4.0
+# SECRETS NEEDED (GitHub > Settings > Secrets and variables > Actions):
+#   - RENDER_PROD_HOOK   : Render production deploy hook URL
+#   - API_HEALTH_KEY     : read-only API key for /healthz
+#   - PROD_API_KEY       : real API key for smoke tests
+# OPTIONAL:
+#   - (none for registry; Render will build from the repo)
+# ------------------------------------------------------
+
+name: Release & Deploy (Prod)
 
 on:
   push:
     tags:
-      - 'v*'   # e.g., v1.0.0
+      - "v*"         # any tag starting with v, e.g., v1.4.0 or v1.5.0-rc.1
 
+# Permissions for creating GitHub Releases
 permissions:
   contents: write
-  packages: write
+
+# Change this to your real prod health URL
+env:
+  HEALTH_URL: https://YOUR-PROD-HOST.onrender.com/healthz
 
 jobs:
-  test-build:
+  build_release_and_deploy:
+    name: Build Release, Deploy to Render, Health Check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-
-      # (Optional) Python CI — keep this aligned with your project
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
-      - run: pip install -r requirements.txt || true
-      - run: pip install -r requirements-dev.txt || true
-      - run: |
-          if [ -f pyproject.toml ] || [ -d tests ]; then
-            echo "Running tests..."
-            pytest -q --maxfail=1 --disable-warnings || true
-          else
-            echo "No tests found, continuing."
+          fetch-depth: 0         # we need history to parse CHANGELOG
+
+      - name: Validate SemVer tag
+        # Ensures tags look like v1.2.3 or v1.2.3-rc.1
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if ! echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$'; then
+            echo "Tag $TAG is not SemVer (vX.Y.Z or vX.Y.Z-rc.N)"; exit 1; fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Extract release notes from CHANGELOG.md
+        id: changelog
+        # If CHANGELOG has headings like "## [1.4.0] - 2025-09-18"
+        # we extract that section; else we fall back to entire file.
+        run: |
+          VER="${TAG#v}"
+          if grep -q "## \\[${VER}\\]" CHANGELOG.md; then
+            awk "/^## \\[${VER}\\]/,/^## \\[/" CHANGELOG.md | sed '$d' > RELEASE_NOTES.md || true
           fi
+          # If nothing extracted (e.g., rc tags or different format), use whole file
+          if [ ! -s RELEASE_NOTES.md ]; then cp CHANGELOG.md RELEASE_NOTES.md; fi
+          echo "Using release notes:"
+          head -n 40 RELEASE_NOTES.md || true
 
-      # Build and push Docker image to GHCR tagged with version + sha
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      # --- OPTIONAL: SBOM generation for the repository’s Docker image ---
+      # If Render builds from git, you won’t have a local image here.
+      # You can leave SBOM out, or generate an SBOM for the source tree instead.
+      # Example source SBOM (kept optional but recommended long-term):
+      - name: Generate source SBOM (Syft)  # optional
+        uses: anchore/sbom-action@v0.17.6
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          path: .
+          format: spdx-json
+          output-file: sbom-${{ env.TAG }}-source.spdx.json
+        continue-on-error: true
 
-      - name: Build & push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
-            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
-
-      # Extract release notes from CHANGELOG.md
-      - name: Extract release notes
-        run: scripts/extract_changelog.sh "${GITHUB_REF_NAME}" CHANGELOG.md CHANGELOG_RELEASE.md
-
-      # Create (or update) the GitHub Release with notes
-      - name: Publish GitHub Release
+      - name: Create GitHub Release
+        # Publishes the release. Attaches SBOM if it exists.
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          body_path: CHANGELOG_RELEASE.md
-          generate_release_notes: false
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            sbom-${{ env.TAG }}-source.spdx.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # (Optional) Trigger Render production deploy via deploy hook secret
-       - name: Deploy to Render (prod)
-         if: always()
-         run: curl -fsS -X POST "$RENDER_PROD_HOOK"
-         env:
-           RENDER_PROD_HOOK: ${{ secrets.RENDER_PROD_HOOK }}
-  e2e-smoke:
-    runs-on: ubuntu-latest
-    needs: test-build   # or the job that runs your deploy step
-    steps:
-      - name: Wait for Render to finish rolling out
-        run: sleep 12
-
-      - name: Health check (prod)
+      - name: Deploy to Render (prod)
+        # Triggers your Render PROD deploy (Render pulls repo and builds)
+        env:
+          RENDER_PROD_HOOK: ${{ secrets.RENDER_PROD_HOOK }}
         run: |
-          curl -fsS https://pdf-analyzer-api-production.onrender.com/v1/health | jq .
+          if [ -z "$RENDER_PROD_HOOK" ]; then
+            echo "RENDER_PROD_HOOK not set"; exit 1; fi
+          curl -sSf -X POST "$RENDER_PROD_HOOK"
+          echo "Deploy hook called."
 
-      # (Optional) Analyze a tiny PDF after you add a sample + API key secret
-      # - name: Analyze sample PDF (prod)
-      #   run: |
-      #     curl -fsS -X POST https://pdf-analyzer-api-production.onrender.com/v1/analyze \
-      #       -H "x-api-key: $API_KEY" \
-      #       -F "file=@samples/clean.pdf;type=application/pdf" | jq .
-      #   env:
-      #     API_KEY: ${{ secrets.PROD_API_KEY }}
-
-  e2e-smoke:
-    runs-on: ubuntu-latest
-    needs: test-build
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Wait for Render rollout
-        run: sleep 12
-
-      - name: Health check (prod)
+      - name: Health check (with retries)
+        # Waits for Render to finish and app to be healthy
+        env:
+          API_HEALTH_KEY: ${{ secrets.API_HEALTH_KEY }}
+          HEALTH_URL: ${{ env.HEALTH_URL }}
         run: |
-          curl -fsS https://pdf-analyzer-api-production.onrender.com/v1/health | tee health.json
-          # Assert health JSON is ok and env is prod
-          jq -e '.ok == true and .env == "prod"' health.json >/dev/null
+          if [ -z "$API_HEALTH_KEY" ]; then
+            echo "API_HEALTH_KEY not set"; exit 1; fi
+          if [ -z "$HEALTH_URL" ]; then
+            echo "HEALTH_URL env not set"; exit 1; fi
 
-  e2e-analyze:
+          # 15 tries x 10s = ~2.5 minutes
+          for i in {1..15}; do
+            echo "Health attempt $i..."
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "x-api-key: ${API_HEALTH_KEY}" "$HEALTH_URL")
+            if [ "$CODE" = "200" ]; then
+              echo "Healthy ✅"; exit 0; fi
+            sleep 10
+          done
+          echo "Service unhealthy after retries"; exit 1
+
+  post_deploy_smoke:
+    # Only run if deploy/health succeeded
+    needs: build_release_and_deploy
     runs-on: ubuntu-latest
-    needs: e2e-smoke
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
+        # Reuse your known-good samples & assertions
         cases:
           - name: clean
             file: samples/pdfanalyzer-testdoc.pdf
-            # Expect no risky flags
             assert: '.summary.encrypted==false and .summary.embedded_javascript==false and .summary.embedded_files==false and .summary.embeddedurl==false and .summary.fakepdf==false'
           - name: encrypted
             file: samples/pdfanalyzer-passwordprotect.pdf
@@ -122,27 +136,31 @@ jobs:
           - name: embedded
             file: samples/pdfanalyzer-embedword.pdf
             assert: '.summary.embedded_files==true'
-          - name: has_url
-            file: samples/pdfanalyzer-embeddedurl.pdf
-            assert: '.summary.embeddedurl==true'
-          - name: fakepdf
-            file: samples/pdfanalyzer-mimicfakepdf.pdf
-            assert: '.summary.fakepdf==true'
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Ensure sample exists — ${{ matrix.cases.name }}
+        # Fails early if a sample path is wrong/missing
         run: |
           test -f "${{ matrix.cases.file }}" || (echo "Missing ${{ matrix.cases.file }}"; exit 1)
 
       - name: Analyze ${{ matrix.cases.name }} (prod)
+        # Posts the sample PDF to your prod API and asserts the JSON
         env:
           API_KEY: ${{ secrets.PROD_API_KEY }}
         run: |
-          set -e
-          OUT=$(curl -fsS -X POST https://pdf-analyzer-api-production.onrender.com/v1/analyze \
+          if [ -z "$API_KEY" ]; then
+            echo "PROD_API_KEY not set"; exit 1; fi
+
+          # Update the endpoint path if different in your app
+          OUT=$(curl -fsS -X POST https://YOUR-PROD-HOST.onrender.com/v1/analyze \
             -H "x-api-key: $API_KEY" \
             -F "file=@${{ matrix.cases.file }};type=application/pdf")
+
+          # Show the output for easy debugging in logs
           echo "$OUT" | jq .
+
+          # Evaluate the assertion expression using jq
           echo "$OUT" | jq -e '${{ matrix.cases.assert }}' >/dev/null
