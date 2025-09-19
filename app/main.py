@@ -407,7 +407,8 @@ async def analyze_pdf(
         logging.warning(f"Rate limit tracking failed: {e}")
 
     headers = {
-        "X-RateLimit-Limit": dynamic_limit_provider(request),
+        #"X-RateLimit-Limit": dynamic_limit_provider(request), / commented and replaced 09/19
+        "X-RateLimit-Limit": str(get_rate_limit_for_plan(plan).amount),
         "X-RateLimit-Remaining": remaining,
     }
     return JSONResponse(content={"summary": summary, "verdict": verdict}, headers=headers)
