@@ -1,7 +1,7 @@
 import requests
 
-API_URL = "https://pdf-analyzer-api-staging.onrender.com/analyze-pdf"
-API_KEY = "c6035ee5d451.Tae_iK4iNjSVRGRrNA570Yeaxw4UWQtfgmn_82eVmk0"  # Replace with your real key
+API_URL = "https://pdf-analyzer-api-production.onrender.com/analyze-pdf"
+API_KEY = "d34b30da443d.BNKgDEMGELG9bZrsKiIOgNzPX7s8n6efhSiCl3uvTsg"  # Replace with your real key
 FILE_PATH = "C:\\Users\\sonim\\OneDrive\\Documents\\GitHub\\aegisdocs-rebuilt\\pdf-analyzer-api\\samples\\pdfanalyzer-testdoc.pdf"  # Replace with an actual test PDF path
 
 HEADERS = {
