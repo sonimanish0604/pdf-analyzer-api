@@ -3,7 +3,7 @@
 # TRIGGER: push a tag like v1.4.0
 # SECRETS NEEDED (GitHub > Settings > Secrets and variables > Actions):
 #   - RENDER_PROD_HOOK   : Render production deploy hook URL
-#   - API_HEALTH_KEY     : read-only API key for /healthz
+#   - API_HEALTH_KEY     : read-only API key for /health
 #   - PROD_API_KEY       : real API key for smoke tests
 # OPTIONAL:
 #   - (none for registry; Render will build from the repo)
@@ -22,7 +22,7 @@ permissions:
 
 # Change this to your real prod health URL
 env:
-  HEALTH_URL: https://YOUR-PROD-HOST.onrender.com/healthz
+  HEALTH_URL: https://pdf-analyzer-api-production.onrender.com/v1/health
 
 jobs:
   build_release_and_deploy:
@@ -110,6 +110,7 @@ jobs:
               -H "x-api-key: ${API_HEALTH_KEY}" "$HEALTH_URL")
             if [ "$CODE" = "200" ]; then
               echo "Healthy ✅"; exit 0; fi
+              echo "Not healthy yet ($CODE), retry $i"
             sleep 10
           done
           echo "Service unhealthy after retries"; exit 1
