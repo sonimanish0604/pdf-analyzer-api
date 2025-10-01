@@ -32,6 +32,8 @@ from app.pdf_utils import (
     extract_urls,
     has_embedded_files_and_names,
 )
+from app.core.config import get_settings
+from app.db import SessionLocal, api_keys_table, audit_admin_events
 
 # Setup Redis storage (from REDIS_URL env var)
 redis_url = os.getenv("REDIS_URL")
@@ -42,8 +44,7 @@ storage = RedisStorage(redis_url)
 limiter = FixedWindowRateLimiter(storage)
 # ---end --RedisStorage
 
-from app.core.config import get_settings
-from app.db import SessionLocal, api_keys_table, audit_admin_events
+
 
 
 # ------------------ Secrets & Limits ------------------
