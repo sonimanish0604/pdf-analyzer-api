@@ -1,5 +1,9 @@
 # app/routes/mp_register.py
 #from fastapi import APIRouter, Request, HTTPException
+import os
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import HTMLResponse
+
 from app.billing.factory import get_provider
 from app.services.keys import issue_api_key
 from app.db import upsert_tenant_mapping

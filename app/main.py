@@ -17,12 +17,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select, insert, update, and_
-from app.api.routes_marketplace import router as mp_router
+#from app.api.routes_marketplace import router as mp_router
+from app.api.mp_register import router as mp_router
 
 # --added below to use Redisstorage for rate limiting 09/18
 from limits import RateLimitItemPerMinute
 from limits.storage import RedisStorage
 from limits.strategies import FixedWindowRateLimiter
+
+from app.pdf_utils import (
+    is_true_pdf,
+    is_encrypted,
+    has_embedded_javascript,
+    extract_urls,
+    has_embedded_files_and_names,
+)
 
 # Setup Redis storage (from REDIS_URL env var)
 redis_url = os.getenv("REDIS_URL")
@@ -35,13 +44,7 @@ limiter = FixedWindowRateLimiter(storage)
 
 from app.core.config import get_settings
 from app.db import SessionLocal, api_keys_table, audit_admin_events
-from app.pdf_utils import (
-    is_true_pdf,
-    is_encrypted,
-    has_embedded_javascript,
-    extract_urls,
-    has_embedded_files_and_names,
-)
+
 
 # ------------------ Secrets & Limits ------------------
 ADMIN_KEY = os.getenv("ADMIN_KEY")
