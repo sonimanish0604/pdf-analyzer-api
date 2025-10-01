@@ -1,0 +1,6 @@
+[tool.semantic_release]
+version_source = "tag"
+upload_to_release = true
+changelog_file = "CHANGELOG.md"
+build_command = "pip install build && python -m build"
+commit_parser = "angular"   # follows Conventional Commits
