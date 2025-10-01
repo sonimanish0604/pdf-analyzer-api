@@ -59,6 +59,7 @@ jobs:
         # runs your tests folder; stops early if too many fail
 
       - name: Build docker image (smoke build only)
-        run: docker build -t pdf-analyzer:ci .
+        #run: docker build -t pdf-analyzer:ci .
+        run: docker build -f ./docker/Dockerfile .
         # ensures Dockerfile can still produce a working image
         # doesn’t push or deploy — just a safety build
