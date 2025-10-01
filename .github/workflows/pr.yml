@@ -57,6 +57,9 @@ jobs:
       - name: Unit tests
         run: pytest -q --maxfail=1 --disable-warnings
         # runs your tests folder; stops early if too many fail
+      
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
 
       - name: Build docker image (smoke build only)
         #run: docker build -t pdf-analyzer:ci .
