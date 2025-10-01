@@ -7,6 +7,7 @@ from app.db import upsert_tenant_mapping
 router = APIRouter()
 PROVIDER = get_provider(os.environ.get("BILLING_PROVIDER", "direct"))
 
+
 @router.post("/mp/register")
 async def mp_register(req: Request):
     token = (await req.json()).get("token") or req.query_params.get("token")
@@ -22,4 +23,6 @@ async def mp_register(req: Request):
     )
     api_key = issue_api_key(tenant_id)  # show once
     # return minimal HTML success page
-    return HTMLResponse(f"<h3>Subscription linked</h3><p>Your API key:</p><code>{api_key}</code>")
+    return HTMLResponse(
+        f"<h3>Subscription linked</h3><p>Your API key:</p><code>{api_key}</code>"
+    )

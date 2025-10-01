@@ -2,6 +2,7 @@
 import secrets
 import hashlib
 
+
 def issue_api_key(tenant_id: str) -> str:
     # generate raw key
     raw_key = secrets.token_hex(32)

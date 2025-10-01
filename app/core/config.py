@@ -2,7 +2,8 @@
 from functools import lru_cache
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, AnyUrl, validator
+from pydantic import Field, AnyUrl
+
 
 class Settings(BaseSettings):
     # Env identity
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
 
     # Only load .env automatically in dev
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
 
 @lru_cache
 def get_settings() -> Settings:
