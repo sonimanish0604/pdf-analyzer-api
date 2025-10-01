@@ -1,4 +1,5 @@
 # app/services/keys.py
+import secrets
 import hashlib
 from app.core.config import get_settings
 from app.db import save_api_key_hash  # implement this DB helper
