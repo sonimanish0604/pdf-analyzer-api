@@ -355,7 +355,7 @@ def verify_api_key(request: Request):
             ).where(
                 and_(
                     api_keys_table.c.key_prefix == prefix,
-                    api_keys_table.c.active == True,
+                    api_keys_table.c.active,
                 )
             )
         ).first()
