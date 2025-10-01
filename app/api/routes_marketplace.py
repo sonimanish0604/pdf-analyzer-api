@@ -13,7 +13,6 @@ AWS_PRODUCT_CODE = os.getenv("AWS_PRODUCT_CODE")
 # Boto3 client for Marketplace Metering
 marketplace = boto3.client("meteringmarketplace")
 
-
 @router.post("/register")
 async def register(req: Request):
     body = await req.json()

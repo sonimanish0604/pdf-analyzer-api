@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select, insert, update, and_
+from app.api.routes_marketplace import router as mp_router
 
 # --added below to use Redisstorage for rate limiting 09/18
 from limits import RateLimitItemPerMinute
@@ -106,7 +107,7 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
+app.include_router(mp_router, prefix="/mp")
 
 @app.get("/", include_in_schema=False)
 def root():
@@ -304,7 +305,7 @@ def admin_revoke_key(key_id: str, request: Request):
 def get_api_key_from_request(request: Request):
     raw = request.headers.get("x-api-key")
     p, _ = _parse_key(raw) if raw else (None, None)
-    return p or get_remote_address(request)
+    return p 
 
 
 # --commenting below to replace with RedisStorage 09/18

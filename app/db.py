@@ -85,3 +85,8 @@ metadata.create_all(engine)
 
 # ORM session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def upsert_tenant_mapping(provider, customer_identifier, product_code, account_id):
+    # check DB if tenant already exists
+    # if not, create it
+    # return tenant_id
+    ...
