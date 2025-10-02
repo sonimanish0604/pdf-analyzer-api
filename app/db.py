@@ -79,8 +79,9 @@ audit_admin_events = Table(
 )
 
 # Create missing tables on first boot
-metadata.create_all(engine)
-
+#
+# metadata.create_all(engine)
+metadata = MetaData()
 # ORM session factory
 #SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 SessionLocal = async_sessionmaker(
