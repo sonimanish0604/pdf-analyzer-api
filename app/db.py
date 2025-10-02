@@ -22,8 +22,10 @@
 import uuid
 import os
 from typing import Optional, Dict, Any
-from sqlalchemy import insert, select, update
 from datetime import datetime
+from sqlalchemy import insert, select, update
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
 
@@ -90,9 +92,9 @@ audit_admin_events = Table(
 metadata = MetaData()
 # ORM session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-SessionLocal = async_sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False  # <- important
-)
+#SessionLocal = async_sessionmaker(
+#    bind=engine, class_=AsyncSession, expire_on_commit=False  # <- important
+#)
 
 def save_api_key_hash(
     *,
