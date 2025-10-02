@@ -84,9 +84,9 @@ audit_admin_events = Table(
 metadata = MetaData()
 # ORM session factory
 #SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-SessionLocal = async_sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False  # <- important
-)
+#SessionLocal = async_sessionmaker(
+#    bind=engine, class_=AsyncSession, expire_on_commit=False  # <- important
+#)
 def upsert_tenant_mapping(provider, customer_identifier, product_code, account_id):
     # check DB if tenant already exists
     # if not, create it
