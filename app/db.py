@@ -45,7 +45,7 @@ if not DATABASE_URL:
 #    pool_size=5,
 #    max_overflow=10,
 #)
----added below for async 
+#---added below for async 
 engine = create_async_engine(
     DATABASE_URL,  # e.g., postgresql+asyncpg://...
     pool_pre_ping=True,
