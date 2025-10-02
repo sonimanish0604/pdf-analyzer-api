@@ -41,7 +41,7 @@ from app.db import SessionLocal, api_keys_table, audit_admin_events
 #-----loggin on start
 logging.basicConfig(level=logging.INFO)
 
-app = create_app()
+#app = create_app()
 app.include_router(mp_router, prefix="/mp")
 app.include_router(admin_rate_limits.router)   # add this line with admin_rate_limits
 
