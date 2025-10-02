@@ -20,6 +20,8 @@
 # ----------------------------------------------------------------------------------#
 # ***added 09/14/2025 for database**--commented above lines
 import os
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from datetime import datetime
 from sqlalchemy import (
     create_engine,
@@ -31,8 +33,6 @@ from sqlalchemy import (
     DateTime,
     Index,
 )
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 # ------------------ Config ------------------
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
