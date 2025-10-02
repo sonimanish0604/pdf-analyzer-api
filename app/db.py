@@ -20,8 +20,6 @@
 # ----------------------------------------------------------------------------------#
 # ***added 09/14/2025 for database**--commented above lines
 import os
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from datetime import datetime
 from sqlalchemy import (
     create_engine,
@@ -38,19 +36,14 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is required")
 
-# Connection: tune as you like
-#engine = create_engine(
-#    DATABASE_URL,
-#    pool_pre_ping=True,
-#    pool_size=5,
-#    max_overflow=10,
-#)
-#---added below for async 
-engine = create_async_engine(
-    DATABASE_URL,  # e.g., postgresql+asyncpg://...
+
+engine = create_engine(
+    DATABASE_URL,
     pool_pre_ping=True,
-    future=True,
+    pool_size=5,
+    max_overflow=10,
 )
+
 metadata = MetaData()
 
 # ------------------ Tables ------------------
