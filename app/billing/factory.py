@@ -1,14 +1,21 @@
 # app/billing/factory.py
-from .aws import AWSProvider
-from .azure import AzureProvider
-from .gcp import GCPProvider
-from .direct import DirectProvider
+import os
+from .types import BillingProvider
+from .noop import NoopProvider
 
+AWS_MP_ENABLED  = os.getenv("AWS_MP_ENABLED", "false").lower() == "true"
+AZURE_MP_ENABLED = os.getenv("AZURE_MP_ENABLED", "false").lower() == "true"
+GCP_MP_ENABLED   = os.getenv("GCP_MP_ENABLED", "false").lower() == "true"
 
-def get_provider(name: str):
-    return {
-        "aws": AWSProvider(),
-        "azure": AzureProvider(),
-        "gcp": GCPProvider(),
-        "direct": DirectProvider(),
-    }[name]
+def get_provider() -> BillingProvider:
+    # Order of precedence; enable only one at a time for now
+    if AWS_MP_ENABLED:
+        from .aws import AWSProvider
+        return AWSProvider()
+    if AZURE_MP_ENABLED:
+        from .azure import AzureProvider  # implement later with lazy imports
+        return AzureProvider()
+    if GCP_MP_ENABLED:
+        from .gcp import GCPProvider      # implement later with lazy imports
+        return GCPProvider()
+    return NoopProvider()
