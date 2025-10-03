@@ -1,9 +1,9 @@
 # tests/conftest.py
+import asyncio
+import os
+import pytest_asyncio as pytest
 import fakeredis.aioredis as fakeredis
-import pytest
-
 from app.services import redis as redis_service
-
 
 @pytest.fixture(autouse=True)
 def set_env(monkeypatch):
@@ -11,7 +11,6 @@ def set_env(monkeypatch):
     monkeypatch.setenv("RATE_LIMIT_ENABLED", "true")
     monkeypatch.setenv("REDIS_NAMESPACE", "t_pdfapi")
     yield
-
 
 @pytest.fixture
 async def fake_redis():
@@ -21,7 +20,6 @@ async def fake_redis():
     finally:
         await r.flushall()
         await r.aclose()
-
 
 @pytest.fixture(autouse=True)
 def patch_redis(fake_redis, monkeypatch):
