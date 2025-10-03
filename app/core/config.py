@@ -1,12 +1,13 @@
 from functools import lru_cache
-from typing import List, Optional
+
+from pydantic import AnyUrl, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, AnyUrl, model_validator
+
 
 class Settings(BaseSettings):
     # Env identity (support both names)
-    APP_ENV: str = Field(default="dev")   # dev | staging | prod
-    ENV: str = Field(default="dev")       # legacy name used elsewhere
+    APP_ENV: str = Field(default="dev")  # dev | staging | prod
+    ENV: str = Field(default="dev")  # legacy name used elsewhere
 
     # Logging
     LOG_LEVEL: str = Field(default="INFO")
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
 
     # Billing / integrations
     BILLING_PROVIDER: str = Field(default="none")
-    VT_API_KEY: Optional[str] = None
+    VT_API_KEY: str | None = None
 
     # Core infrastructure
     DATABASE_URL: AnyUrl
@@ -33,12 +34,14 @@ class Settings(BaseSettings):
     CORS_ALLOW_ORIGINS: str = Field(default="")
 
     @property
-    def cors_origins(self) -> List[str]:
+    def cors_origins(self) -> list[str]:
         s = (self.CORS_ALLOW_ORIGINS or "").strip()
         return [o.strip() for o in s.split(",")] if s else []
 
     # Read .env in dev; Render uses process env
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     # Keep ENV and APP_ENV synchronized (either name can be set)
     @model_validator(mode="after")
@@ -49,6 +52,7 @@ class Settings(BaseSettings):
         if not self.APP_ENV:
             object.__setattr__(self, "APP_ENV", self.ENV)
         return self
+
 
 @lru_cache
 def get_settings() -> Settings:

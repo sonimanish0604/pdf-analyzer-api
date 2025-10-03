@@ -1,5 +1,6 @@
-import requests
 from pathlib import Path
+
+import requests
 
 # Go up one level from tests to root
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -7,7 +8,7 @@ FILE_PATH = BASE_DIR / "samples" / "pdfanalyzer-testdoc.pdf"
 
 API_URL = "https://pdf-analyzer-api-production.onrender.com/analyze-pdf"
 API_KEY = "d34b30da443d.BNKgDEMGELG9bZrsKiIOgNzPX7s8n6efhSiCl3uvTsg"  # Replace with your real key
-#FILE_PATH = "C:\\Users\\sonim\\OneDrive\\Documents\\GitHub\\aegisdocs-rebuilt\\pdf-analyzer-api\\samples\\pdfanalyzer-testdoc.pdf"  # Replace with an actual test PDF path
+# FILE_PATH = "C:\\Users\\sonim\\OneDrive\\Documents\\GitHub\\aegisdocs-rebuilt\\pdf-analyzer-api\\samples\\pdfanalyzer-testdoc.pdf"  # Replace with an actual test PDF path
 
 HEADERS = {"x-api-key": API_KEY, "accept": "application/json"}
 

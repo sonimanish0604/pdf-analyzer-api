@@ -16,29 +16,31 @@
 
 # metadata.create_all(engine)
 
+import os
+
 # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # ----------------------------------------------------------------------------------#
 # ***added 09/14/2025 for database**--commented above lines
 import uuid
-import os
-from typing import Optional, Dict, Any
 from datetime import datetime
-from sqlalchemy import insert, select, update
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import IntegrityError
-
+from typing import Any
 
 from sqlalchemy import (
-    create_engine,
-    Column,
-    String,
-    Table,
-    MetaData,
     Boolean,
+    Column,
     DateTime,
     Index,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+    insert,
+    select,
+    update,
 )
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
+
 # ------------------ Config ------------------
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
@@ -92,9 +94,10 @@ audit_admin_events = Table(
 metadata = MetaData()
 # ORM session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-#SessionLocal = async_sessionmaker(
+# SessionLocal = async_sessionmaker(
 #    bind=engine, class_=AsyncSession, expire_on_commit=False  # <- important
-#)
+# )
+
 
 def save_api_key_hash(
     *,
@@ -104,8 +107,8 @@ def save_api_key_hash(
     salt: str,
     plan: str = "free",
     active: bool = True,
-    expires_at: Optional[datetime] = None,
-) -> Dict[str, Any]:
+    expires_at: datetime | None = None,
+) -> dict[str, Any]:
     """
     Persist a newly issued API key hash (NOT the raw key).
     Returns a dict with the inserted record's basic fields.
@@ -142,7 +145,8 @@ def save_api_key_hash(
             "created_at": datetime.utcnow().isoformat(),
         }
 
-def get_api_key_by_prefix(key_prefix: str) -> Optional[Dict[str, Any]]:
+
+def get_api_key_by_prefix(key_prefix: str) -> dict[str, Any] | None:
     """
     Fetch a key row by its prefix (used in request auth).
     Returns a dict with stored fields or None.
@@ -151,6 +155,7 @@ def get_api_key_by_prefix(key_prefix: str) -> Optional[Dict[str, Any]]:
         stmt = select(api_keys_table).where(api_keys_table.c.key_prefix == key_prefix)
         row = session.execute(stmt).mappings().first()
         return dict(row) if row else None
+
 
 def mark_api_key_used(key_id: str) -> None:
     """
@@ -164,6 +169,7 @@ def mark_api_key_used(key_id: str) -> None:
         )
         session.execute(stmt)
         session.commit()
+
 
 def upsert_tenant_mapping(provider, customer_identifier, product_code, account_id):
     # check DB if tenant already exists

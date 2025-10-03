@@ -1,9 +1,12 @@
 # app/services/deps_rate_limit.py
-import os, time
+import os
+import time
+
 from fastapi import HTTPException, Request
+
 from app.core.config import get_settings
-from app.services.redis import get_redis
 from app.services.limits import get_limits_for
+from app.services.redis import get_redis
 
 NAMESPACE = os.getenv("REDIS_NAMESPACE", "pdfapi")
 RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
@@ -12,9 +15,11 @@ RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
 # Handles /health, /v1/health, /api/v1/health, /metrics, /ready
 ALLOWLIST_SUFFIXES = ("/health", "/metrics", "/ready")
 
+
 def is_allowlisted(request: Request) -> bool:
     p = request.url.path.rstrip("/")
     return any(p == suf or p.endswith(suf) for suf in ALLOWLIST_SUFFIXES)
+
 
 def require_api_key(request: Request):
     # Skip auth for allowlisted endpoints
@@ -26,12 +31,15 @@ def require_api_key(request: Request):
     # cache for limiter
     request.state.api_key = api_key
 
+
 async def enforce_rate_limit(request: Request):
     # Skip rate limits for allowlisted endpoints or when disabled
     if is_allowlisted(request) or not RATE_LIMIT_ENABLED:
         return
 
-    api_key = getattr(request.state, "api_key", None) or request.headers.get("X-API-Key")
+    api_key = getattr(request.state, "api_key", None) or request.headers.get(
+        "X-API-Key"
+    )
     if not api_key:
         raise HTTPException(401, "Missing X-API-Key")
 
@@ -43,8 +51,10 @@ async def enforce_rate_limit(request: Request):
     keyinfo = {"kid": api_key, "plan": "free", "status": "active"}
     await rate_limiter(keyinfo)
 
+
 def _today_str() -> str:
     return time.strftime("%Y%m%d", time.gmtime())
+
 
 async def rate_limiter(keyinfo: dict):
     if not RATE_LIMIT_ENABLED:
@@ -53,7 +63,7 @@ async def rate_limiter(keyinfo: dict):
     if keyinfo.get("status") != "active":
         raise HTTPException(403, "API key inactive")
 
-    kid  = keyinfo["kid"]
+    kid = keyinfo["kid"]
     plan = keyinfo.get("plan", "free")
 
     # Get per-plan limits (rps, burst, daily)
@@ -92,7 +102,7 @@ async def rate_limiter(keyinfo: dict):
     last_raw = await r.get(lkey)
 
     tokens = int(tokens_raw) if tokens_raw is not None else burst
-    last   = int(last_raw)   if last_raw   is not None else now
+    last = int(last_raw) if last_raw is not None else now
 
     elapsed = max(0, now - last)
     if rps and elapsed > 0:

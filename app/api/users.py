@@ -1,12 +1,14 @@
 # app/api/users.py
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.api.deps_db import get_session
 from app.models import User  # your ORM model
 
 router = APIRouter()
+
 
 @router.get("/users/{uid}")
 async def get_user(uid: str, session: AsyncSession = Depends(get_session)):

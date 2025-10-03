@@ -1,16 +1,16 @@
 # router.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from .deps_db import get_session
 
 router = APIRouter()
 
+
 @router.get("/users/{uid}")
 async def get_user(uid: str, session: AsyncSession = Depends(get_session)):
     result = await session.execute(
-        select(User)
-        .options(selectinload(User.roles))
-        .where(User.id == uid)
+        select(User).options(selectinload(User.roles)).where(User.id == uid)
     )
     user = result.scalar_one_or_none()
     if not user:

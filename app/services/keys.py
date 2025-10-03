@@ -1,8 +1,10 @@
 # app/services/keys.py
-import secrets
 import hashlib
+import secrets
+
 from app.core.config import get_settings
 from app.db import save_api_key_hash  # implement this DB helper
+
 
 def issue_api_key(tenant_id: str, plan: str = "free") -> str:
     # 1. Generate a raw 64-char hex key (32 bytes)

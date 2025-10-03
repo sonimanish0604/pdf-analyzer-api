@@ -1,18 +1,21 @@
 # tests/test_sanity_samples.py
-import os
 import json
+import os
 import time
 from pathlib import Path
-import requests
+
 import pytest
+import requests
 
 # --- Config: use env vars; fallback to sensible defaults for local runs ---
-API_URL = os.getenv("API_URL", "https://pdf-analyzer-api-staging.onrender.com/analyze-pdf")
+API_URL = os.getenv(
+    "API_URL", "https://pdf-analyzer-api-staging.onrender.com/analyze-pdf"
+)
 API_KEY = os.getenv("API_KEY", "")  # keep empty locally if you run behind a dev key
 HEADERS = {"accept": "application/json", **({"x-api-key": API_KEY} if API_KEY else {})}
 
 SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
-EXPECTED_FILE = SAMPLES_DIR / "expected.json"   # optional exact expectations per file
+EXPECTED_FILE = SAMPLES_DIR / "expected.json"  # optional exact expectations per file
 
 # Optional: rate-limit friendliness
 REQUEST_DELAY_SEC = float(os.getenv("SANITY_DELAY", "0.4"))  # spacing requests slightly
@@ -55,7 +58,12 @@ def test_sample_pdf_flags_shape_and_optionals(pdf_path):
         resp = requests.post(API_URL, headers=HEADERS, files={"file": f}, timeout=60)
 
     # Basic transport checks
-    assert resp.status_code in (200, 400, 415, 422), f"{pdf_path.name}: unexpected status {resp.status_code}"
+    assert resp.status_code in (
+        200,
+        400,
+        415,
+        422,
+    ), f"{pdf_path.name}: unexpected status {resp.status_code}"
     # If your API always returns 200 with 'verdict' field, tighten this to == 200
 
     # Parse JSON
@@ -75,7 +83,11 @@ def test_sample_pdf_flags_shape_and_optionals(pdf_path):
         assert isinstance(data[k], bool), f"{pdf_path.name}: '{k}' should be bool"
 
     assert "verdict" in data, f"{pdf_path.name}: missing key 'verdict'"
-    assert data["verdict"] in {"clean", "suspicious", "malicious"}, f"{pdf_path.name}: unexpected verdict {data['verdict']}"
+    assert data["verdict"] in {
+        "clean",
+        "suspicious",
+        "malicious",
+    }, f"{pdf_path.name}: unexpected verdict {data['verdict']}"
 
     # Optional: other metadata checks if your API returns them
     # for k in ("filename", "filesize", "mime_type"):

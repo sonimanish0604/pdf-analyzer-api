@@ -1,14 +1,16 @@
 # app/services/limits.py
-import json, time
-from typing import Tuple, Dict
+import json
+import time
+
 from app.core.config import get_settings
 from app.services.redis import get_redis
 
-_CACHE: Dict[str, Dict] = {"plans": None, "burst": None, "quota": None}
-_TS: Dict[str, float] = {"plans": 0.0, "burst": 0.0, "quota": 0.0}
+_CACHE: dict[str, dict] = {"plans": None, "burst": None, "quota": None}
+_TS: dict[str, float] = {"plans": 0.0, "burst": 0.0, "quota": 0.0}
 _TTL = 60  # seconds
 
-async def _load_json(key: str) -> Dict:
+
+async def _load_json(key: str) -> dict:
     now = time.time()
     if _CACHE.get(key) and now - _TS[key] < _TTL:
         return _CACHE[key]
@@ -24,7 +26,8 @@ async def _load_json(key: str) -> Dict:
     _TS[key] = now
     return data
 
-async def get_limits_for(plan: str) -> Tuple[int, int, int]:
+
+async def get_limits_for(plan: str) -> tuple[int, int, int]:
     """
     Returns (rps, burst, daily_quota) for the given plan.
     Priority: Redis JSON -> env defaults -> safe caps.
@@ -44,12 +47,12 @@ async def get_limits_for(plan: str) -> Tuple[int, int, int]:
     env_bst = {"free": 3, "dev": 10, "pro": 40}
     env_qta = {"free": 500, "dev": 5000, "pro": 50000}
 
-    rps   = int(plans.get(plan) or env_rps.get(plan, base_rps))
-    brst  = int(burst.get(plan) or env_bst.get(plan, max(3, rps)))
+    rps = int(plans.get(plan) or env_rps.get(plan, base_rps))
+    brst = int(burst.get(plan) or env_bst.get(plan, max(3, rps)))
     dquot = int(quota.get(plan) or env_qta.get(plan, 1000))
 
     # Guardrails
-    rps   = max(1, min(rps,   1000))
-    brst  = max(1, min(brst,  5000))
+    rps = max(1, min(rps, 1000))
+    brst = max(1, min(brst, 5000))
     dquot = max(1, min(dquot, 10_000_000))
     return rps, brst, dquot

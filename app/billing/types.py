@@ -1,6 +1,7 @@
 # app/billing/types.py
-from typing import Any, Dict
+from typing import Any
+
 
 class BillingProvider:
-    def register(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def register(self, payload: dict[str, Any]) -> dict[str, Any]:
         raise NotImplementedError

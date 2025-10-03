@@ -1,57 +1,52 @@
-import os
-import json
-import hmac
 import hashlib
+import hmac
+import json
+import logging
+import os
 import secrets
 import uuid
-import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import BytesIO
+
+# --end
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse, Response
+
+# --added below to use Redisstorage for rate limiting 09/18
+from limits.storage import RedisStorage
+from pydantic import BaseModel
 
 # --added 09/18 for redis Api Rate Limit
 from redis import asyncio as aioredis
+from sqlalchemy import and_, insert, select, update
 
-# --end
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse, Response
-from pydantic import BaseModel
-from sqlalchemy import select, insert, update, and_
-#from app.api.routes_marketplace import router as mp_router
+# from app.api.routes_marketplace import router as mp_router
 from app.api.mp_register import router as mp_router
-
-# --added below to use Redisstorage for rate limiting 09/18
-from limits import RateLimitItemPerMinute
-from limits.storage import RedisStorage
-from limits.strategies import FixedWindowRateLimiter
-from app.services.deps_rate_limit import enforce_rate_limit
-from app.services.rate_limit_introspect import log_limits
-from app.api import admin_rate_limits
-
-from app.pdf_utils import (
-    is_true_pdf,
-    is_encrypted,
-    has_embedded_javascript,
-    extract_urls,
-    has_embedded_files_and_names,
-)
 from app.core.config import get_settings
 from app.db import SessionLocal, api_keys_table, audit_admin_events
+from app.pdf_utils import (
+    extract_urls,
+    has_embedded_files_and_names,
+    has_embedded_javascript,
+    is_encrypted,
+    is_true_pdf,
+)
+from app.services.deps_rate_limit import enforce_rate_limit
+from app.services.rate_limit_introspect import log_limits
 
-#-----loggin on start
+# -----loggin on start
 logging.basicConfig(level=logging.INFO)
 
-#app = create_app()
-#app.include_router(mp_router, prefix="/mp")
-#app.include_router(admin_rate_limits.router)   # add this line with admin_rate_limits
+# app = create_app()
+# app.include_router(mp_router, prefix="/mp")
+# app.include_router(admin_rate_limits.router)   # add this line with admin_rate_limits
 
-#@app.on_event("startup")
-#async def _log_limits_on_start():
-    # “staging” / “prod” – use whatever label you want
+# @app.on_event("startup")
+# async def _log_limits_on_start():
+# “staging” / “prod” – use whatever label you want
 #    await log_limits(context="startup")
-#---end logging
-
-
+# ---end logging
 
 
 # ------------------ Secrets & Limits ------------------
@@ -120,9 +115,11 @@ def create_app() -> FastAPI:
 app = create_app()
 app.include_router(mp_router, prefix="/mp")
 
+
 @app.on_event("startup")
 async def _log_limits_on_start():
     await log_limits(context="startup")
+
 
 # ------------------ Central Rate Limit Middleware ------------------
 # Skip health/docs/openapi and MP registration
@@ -132,6 +129,7 @@ SKIP_PATHS = {
     "/mp/register",
 }
 SKIP_PREFIXES = ("/docs", "/redoc")
+
 
 @app.middleware("http")
 async def rl_middleware(request: Request, call_next):
@@ -152,6 +150,7 @@ async def rl_middleware(request: Request, call_next):
         return JSONResponse({"detail": "rate_limit_error"}, status_code=429)
     return await call_next(request)
 
+
 @app.get("/", include_in_schema=False)
 def root():
     return RedirectResponse(url="/docs")
@@ -165,8 +164,8 @@ def favicon():
 # ------------------ Debug helpers (remove later) ------------------
 @app.get("/__who")
 def __who():
-    import pathlib
     import hashlib
+    import pathlib
 
     p = pathlib.Path(__file__)
     return {"file": str(p), "sha": hashlib.sha1(p.read_bytes()).hexdigest()[:8]}
@@ -286,12 +285,12 @@ def admin_list_keys(request: Request, tenant_id: str | None = None):
                     "plan": row.plan,
                     "active": row.active,
                     "created_at": row.created_at.isoformat(),
-                    "expires_at": row.expires_at.isoformat()
-                    if row.expires_at
-                    else None,
-                    "last_used_at": row.last_used_at.isoformat()
-                    if row.last_used_at
-                    else None,
+                    "expires_at": (
+                        row.expires_at.isoformat() if row.expires_at else None
+                    ),
+                    "last_used_at": (
+                        row.last_used_at.isoformat() if row.last_used_at else None
+                    ),
                 }
             )
         s.execute(
@@ -348,9 +347,7 @@ def admin_revoke_key(key_id: str, request: Request):
 def get_api_key_from_request(request: Request):
     raw = request.headers.get("x-api-key")
     p, _ = _parse_key(raw) if raw else (None, None)
-    return p 
-
-
+    return p
 
 
 # -end
