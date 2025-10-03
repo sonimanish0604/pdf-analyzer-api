@@ -1,0 +1,9 @@
+# docker-compose.test.yml
+services:
+  test:
+    build: .
+    env_file: .env
+    environment:
+      RATE_LIMIT_ENABLED: "true"
+      REDIS_NAMESPACE: "t_pdfapi"
+    command: bash -lc "pytest -q"

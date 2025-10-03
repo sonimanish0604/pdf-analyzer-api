@@ -1,15 +1,14 @@
-from io import BytesIO
-from typing import Tuple, List, Dict, Union
-
-import filetype
-from PyPDF2 import PdfReader
-import fitz  # PyMuPDF
 import re
 import zlib
+from io import BytesIO
+
+import filetype
+import fitz  # PyMuPDF
+from PyPDF2 import PdfReader
 
 
 # -------- helpers --------
-def _ensure_bytes(src: Union[bytes, bytearray, BytesIO]) -> bytes:
+def _ensure_bytes(src: bytes | bytearray | BytesIO) -> bytes:
     if isinstance(src, (bytes, bytearray)):
         return bytes(src)
     if hasattr(src, "read"):
@@ -50,7 +49,7 @@ _JS_PATTERNS = [
 ]
 
 
-def has_embedded_javascript(src: Union[bytes, bytearray, BytesIO]) -> bool:
+def has_embedded_javascript(src: bytes | bytearray | BytesIO) -> bool:
     data = _ensure_bytes(src)
 
     # 1) PyMuPDF quick path
@@ -92,7 +91,7 @@ def has_embedded_javascript(src: Union[bytes, bytearray, BytesIO]) -> bool:
     return False
 
 
-def extract_urls(file_stream: BytesIO) -> Dict[str, List[str]]:
+def extract_urls(file_stream: BytesIO) -> dict[str, list[str]]:
     file_stream.seek(0)
     try:
         reader = PdfReader(file_stream)
@@ -112,12 +111,12 @@ def extract_urls(file_stream: BytesIO) -> Dict[str, List[str]]:
 
 
 def has_embedded_files_and_names(
-    src: Union[bytes, bytearray, BytesIO],
-) -> Tuple[bool, List[str]]:
+    src: bytes | bytearray | BytesIO,
+) -> tuple[bool, list[str]]:
     data = _ensure_bytes(src)
     # 1) PyMuPDF: enumerate embedded files
     try:
-        names: List[str] = []
+        names: list[str] = []
         with fitz.open(stream=data, filetype="pdf") as doc:
             for i in range(doc.embfile_count()):
                 info = doc.embfile_info(i) or {}

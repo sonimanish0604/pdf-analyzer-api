@@ -1,8 +1,10 @@
 # app/billing/aws.py
-import boto3
 import os
 import time
-from .base import BillingProvider, ResolvedCustomer, Entitlement
+
+import boto3
+
+from .base import BillingProvider, Entitlement, ResolvedCustomer
 
 
 class AWSProvider(BillingProvider):

@@ -16,21 +16,29 @@
 
 # metadata.create_all(engine)
 
+import os
+
 # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # ----------------------------------------------------------------------------------#
 # ***added 09/14/2025 for database**--commented above lines
-import os
+import uuid
 from datetime import datetime
+from typing import Any
+
 from sqlalchemy import (
-    create_engine,
-    Column,
-    String,
-    Table,
-    MetaData,
     Boolean,
+    Column,
     DateTime,
     Index,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+    insert,
+    select,
+    update,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 # ------------------ Config ------------------
@@ -38,7 +46,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is required")
 
-# Connection: tune as you like
+
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
@@ -81,10 +89,88 @@ audit_admin_events = Table(
 )
 
 # Create missing tables on first boot
-metadata.create_all(engine)
-
+#
+# metadata.create_all(engine)
+metadata = MetaData()
 # ORM session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# SessionLocal = async_sessionmaker(
+#    bind=engine, class_=AsyncSession, expire_on_commit=False  # <- important
+# )
+
+
+def save_api_key_hash(
+    *,
+    tenant_id: str,
+    key_prefix: str,
+    key_hash: str,
+    salt: str,
+    plan: str = "free",
+    active: bool = True,
+    expires_at: datetime | None = None,
+) -> dict[str, Any]:
+    """
+    Persist a newly issued API key hash (NOT the raw key).
+    Returns a dict with the inserted record's basic fields.
+    """
+    key_id = str(uuid.uuid4())
+    with SessionLocal() as session:
+        stmt = insert(api_keys_table).values(
+            id=key_id,
+            tenant_id=tenant_id,
+            key_prefix=key_prefix,
+            key_hash=key_hash,
+            salt=salt,
+            plan=plan,
+            active=active,
+            created_at=datetime.utcnow(),
+            expires_at=expires_at,
+            last_used_at=None,
+        )
+        try:
+            session.execute(stmt)
+            session.commit()
+        except IntegrityError as e:
+            session.rollback()
+            # likely duplicate key_prefix (unique)
+            raise ValueError(f"API key prefix already exists: {key_prefix}") from e
+
+        # return a minimal echo (don’t return sensitive hash/salt to callers)
+        return {
+            "id": key_id,
+            "tenant_id": tenant_id,
+            "key_prefix": key_prefix,
+            "plan": plan,
+            "active": active,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+
+def get_api_key_by_prefix(key_prefix: str) -> dict[str, Any] | None:
+    """
+    Fetch a key row by its prefix (used in request auth).
+    Returns a dict with stored fields or None.
+    """
+    with SessionLocal() as session:
+        stmt = select(api_keys_table).where(api_keys_table.c.key_prefix == key_prefix)
+        row = session.execute(stmt).mappings().first()
+        return dict(row) if row else None
+
+
+def mark_api_key_used(key_id: str) -> None:
+    """
+    Update last_used_at for observability. Safe to ignore errors upstream.
+    """
+    with SessionLocal() as session:
+        stmt = (
+            update(api_keys_table)
+            .where(api_keys_table.c.id == key_id)
+            .values(last_used_at=datetime.utcnow())
+        )
+        session.execute(stmt)
+        session.commit()
+
+
 def upsert_tenant_mapping(provider, customer_identifier, product_code, account_id):
     # check DB if tenant already exists
     # if not, create it
