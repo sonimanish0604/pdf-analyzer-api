@@ -32,5 +32,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest requests
 
-      - name: Run sanity tests
+      - run: pip install -r requirements.txt
+      - name: RSanity against staging
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          API_URL: ${{ secrets.API_URL_STAGING }}
+          API_KEY: ${{ secrets.API_KEY_STAGING }}
         run: pytest -q tests/test_sanity_samples.py
