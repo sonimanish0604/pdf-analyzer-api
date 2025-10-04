@@ -18,6 +18,10 @@ jobs:
     timeout-minutes: 20     # kill the job if it hangs too long
 
     steps:
+
+      - name: Run unit tests (exclude integration & ratelimit)
+        run: pytest -q -m "not integration and not ratelimit"
+        
       - name: Checkout
         uses: actions/checkout@v4
         # pulls your code into the VM so it can run checks

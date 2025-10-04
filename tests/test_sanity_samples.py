@@ -7,6 +7,12 @@ from pathlib import Path
 import pytest
 import requests
 
+# Only run when explicitly enabled (e.g., post-deploy job)
+if os.getenv("RUN_SANITY", "0") != "1":
+    pytest.skip("Skipping integration sanity tests (set RUN_SANITY=1 to enable).", allow_module_level=True)
+
+pytestmark = pytest.mark.integration
+
 # --- Config: use env vars; fallback to sensible defaults for local runs ---
 API_URL = os.getenv(
     "API_URL", "https://pdf-analyzer-api-staging.onrender.com/analyze-pdf"
