@@ -1,11 +1,10 @@
 # api/routes_marketplace.py
 import os
-
 import boto3
-from db import upsert_tenant_mapping
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from services.keys import issue_api_key
+from db import upsert_tenant_mapping
 
 router = APIRouter()
 
@@ -13,7 +12,6 @@ AWS_PRODUCT_CODE = os.getenv("AWS_PRODUCT_CODE")
 
 # Boto3 client for Marketplace Metering
 marketplace = boto3.client("meteringmarketplace")
-
 
 @router.post("/register")
 async def register(req: Request):

@@ -1,9 +1,0 @@
-{
-  "pdfanalyzer-testdoc.pdf": {
-    "encrypted": false,
-    "has_javascript": false,
-    "has_embedded_files": false,
-    "mime_spoofed": false,
-    "verdict": "clean"
-  }
-}
