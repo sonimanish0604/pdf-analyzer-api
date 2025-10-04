@@ -1,6 +1,7 @@
 # tests/conftest.py
-import os, sys
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
@@ -8,8 +9,8 @@ import pytest
 # Try async fixtures; fall back gracefully if plugin not installed
 ASYNC_FIXTURES = True
 try:
-    import pytest_asyncio
     import fakeredis.aioredis as fakeredis
+    import pytest_asyncio
 except Exception:
     ASYNC_FIXTURES = False
 
