@@ -18,10 +18,6 @@ jobs:
     timeout-minutes: 20     # kill the job if it hangs too long
 
     steps:
-
-      - name: Run unit tests (exclude integration & ratelimit)
-        run: pytest -q -m "not integration and not ratelimit"
-        
       - name: Checkout
         uses: actions/checkout@v4
         # pulls your code into the VM so it can run checks
@@ -61,18 +57,8 @@ jobs:
       - name: Unit tests
         run: pytest -q --maxfail=1 --disable-warnings
         # runs your tests folder; stops early if too many fail
-      
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v3
-
-      - name: Install Docker
-      - run: |
-              sudo apt-get update
-              sudo apt-get install -y docker.io
-            
 
       - name: Build docker image (smoke build only)
-        #run: docker build -t pdf-analyzer:ci .
-        run: docker build -f ./docker/Dockerfile .
+        run: docker build -t pdf-analyzer:ci .
         # ensures Dockerfile can still produce a working image
         # doesn’t push or deploy — just a safety build
