@@ -1,0 +1,41 @@
+name: sanity-tests
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch: {}
+
+concurrency:
+  group: sanity-develop
+  cancel-in-progress: true
+
+jobs:
+  test-samples:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      API_URL: ${{ secrets.STAGING_API_URL }}   # e.g., https://pdf-analyzer-api-develop.onrender.com/analyze-pdf
+      API_KEY: ${{ secrets.STAGING_API_KEY }}
+      SANITY_DELAY: "0.4"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest requests
+
+      - run: pip install -r requirements.txt
+      - name: RSanity against staging
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          API_URL: ${{ secrets.API_URL_STAGING }}
+          API_KEY: ${{ secrets.API_KEY_STAGING }}
+        run: pytest -q tests/test_sanity_samples.py

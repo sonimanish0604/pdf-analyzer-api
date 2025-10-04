@@ -1,0 +1,42 @@
+[tool.semantic_release]
+version_source = "tag"
+upload_to_release = true
+changelog_file = "CHANGELOG.md"
+build_command = "pip install build && python -m build"
+commit_parser = "angular"   # follows Conventional Commits
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+extend-exclude = """
+/(
+  .venv
+  | build
+  | dist
+  | .git
+  | .mypy_cache
+  | .ruff_cache
+)/
+"""
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["app", "tests"]
+skip = [".venv", "build", "dist"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+# Keep it focused: style (E/F), import order (I), bugbear (B), pyupgrade (UP)
+select = ["E", "F", "I", "B", "UP"]
+# Black handles line length; ignore E501 noise
+ignore = ["E501"]
+
+[tool.ruff.per-file-ignores]
+# FastAPI: Depends(...) defaults trigger B008; ignore in API routers
+"app/api/*.py" = ["B008"]
+# Allow package re-exports without “unused import” warnings
+"**/__init__.py" = ["F401"]
+
+[tool.ruff.isort]
+known-first-party = ["app", "tests"]

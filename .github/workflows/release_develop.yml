@@ -1,0 +1,39 @@
+name: version-bump-develop
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: version-bump-develop
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release
+
+      - name: Semantic Release (prerelease on develop)
+        env:
+          PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+        run: |
+          semantic-release version --prerelease
+          semantic-release changelog
+
+      - name: Push tags and changelog
+        run: |
+          git push --follow-tags origin develop

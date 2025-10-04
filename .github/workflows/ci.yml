@@ -1,0 +1,32 @@
+# .github/workflows/ci.yml
+name: ci
+on:
+  pull_request:
+    branches: [ develop ]
+  push:
+    branches: [ develop, main ]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r requirements.txt
+      - run: pip install -U pytest pytest-asyncio fakeredis httpx freezegun
+      - name: Run unit + integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}   # <— add this
+          RATE_LIMIT_ENABLED: "true"
+          REDIS_NAMESPACE: "t_pdfapi"
+    run: pytest -q -m "unit or integration"
+  smoke:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up -d --build
+      - name: Wait for API
+        run: for i in {1..30}; do curl -fsS http://localhost:8000/v1/health && break; sleep 2; done
+      - run: bash scripts/smoke.sh http://localhost:8000
